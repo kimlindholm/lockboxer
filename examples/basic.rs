@@ -2,7 +2,7 @@ use lockboxer::Vault;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let key = lockboxer::generate_key();
-    let vault = Vault::new(&key, "AES.GCM.V1");
+    let vault = Vault::new(&key);
 
     let plaintext = b"plaintext";
     println!("Plaintext: {}", std::str::from_utf8(plaintext)?);

@@ -198,7 +198,7 @@ impl Vault {
         combined_ciphertext.extend_from_slice(ciphertext);
         combined_ciphertext.extend_from_slice(ciphertag); // Append the tag for decryption
 
-        let nonce = Nonce::from_slice(&iv);
+        let nonce = Nonce::from_slice(iv);
         let aad = b"AES256GCM";
 
         let plaintext = self

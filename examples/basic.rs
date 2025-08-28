@@ -1,7 +1,7 @@
-use lockbox::Vault;
+use lockboxer::Vault;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let key = lockbox::generate_key();
+    let key = lockboxer::generate_key();
     let vault = Vault::new(&key, "AES.GCM.V1");
 
     let plaintext = b"plaintext";

@@ -1,6 +1,6 @@
-# Lockbox
+# Lockboxer
 
-`Lockbox` is a Rust library that provides easy-to-use, secure, and efficient
+`Lockboxer` is a configurable fork of [Lockbox](https://github.com/scrogson/lockbox) Rust library that provides easy-to-use, secure, and efficient
 encryption and decryption using the AES-GCM (Galois/Counter Mode) algorithm.
 
 It ensures data integrity and confidentiality while offering flexibility for
@@ -15,25 +15,25 @@ various use cases.
 
 ## Installation
 
-To use `Lockbox` in your Rust project, add the following to your `Cargo.toml`:
+To use `Lockboxer` in your Rust project, add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-lockbox = "0.1"
+lockboxer = "0.1"
 ```
 
 ## Getting Started
 
-Here’s a quick example to get you started with `Lockbox`:
+Here’s a quick example to get you started with `Lockboxer`:
 
 ```rust
-use lockbox::Vault;
+use lockboxer::Vault;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate a random key
     // This is for demo purposes. In a real situation you'll want to
     // use a stable key.
-    let key = lockbox::generate_key();
+    let key = lockboxer::generate_key();
 
     // Initialize a vault with the key and a tag
     let vault = Vault::new(&key, "AES.GCM.V1");

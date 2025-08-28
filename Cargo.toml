@@ -1,12 +1,12 @@
 [package]
-name = "lockbox"
-description = "Easy-to-use, secure, and efficient encryption and decryption using the AES-GCM (Galois/Counter Mode) algorithm."
+name = "lockboxer"
+description = "Configurable fork of Lockbox encryption library."
 readme = "README.md"
 keywords = ["encryption", "aes", "gcm", "vault", "crypto"]
 license = "MIT"
-repository = "https://github.com/scrogson/lockbox"
-homepage = "https://github.com/scrogson/lockbox"
-documentation = "https://docs.rs/lockbox"
+repository = "https://github.com/kimlindholm/lockboxer"
+homepage = "https://github.com/kimlindholm/lockboxer"
+documentation = "https://docs.rs/lockboxer"
 version = "0.1.0"
 edition = "2021"
 

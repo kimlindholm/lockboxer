@@ -1,4 +1,7 @@
-//! Lockbox
+//! Lockboxer
+//!
+//! Configurable fork of [Lockbox](https://github.com/scrogson/lockbox).
+//! It is used in accordance with the [project's license](https://github.com/scrogson/lockbox/blob/58b771fd5115295fd4282b754086fd0b6126e420/Cargo.toml#L6).
 //!
 //! This library provides encryption and decryption using the AES-GCM (Galois/Counter Mode) algorithm.
 //! It ensures data integrity and confidentiality while providing flexibility for various use cases.
@@ -45,7 +48,7 @@ pub enum Error {
 /// # Example
 ///
 /// ```
-/// let key = lockbox::generate_key();
+/// let key = lockboxer::generate_key();
 /// println!("Generated key: {:?}", key);
 /// ```
 pub fn generate_key() -> Vec<u8> {
@@ -75,7 +78,7 @@ impl Vault {
     /// # Example
     ///
     /// ```
-    /// use lockbox::Vault;
+    /// use lockboxer::Vault;
     ///
     /// let key = [0u8; 32]; // 256-bit key for AES-256
     /// let vault = Vault::new(&key, "AES.GCM.V1");
@@ -106,7 +109,7 @@ impl Vault {
     /// # Example
     ///
     /// ```
-    /// use lockbox::{Vault, generate_key};
+    /// use lockboxer::{Vault, generate_key};
     ///
     /// let key = generate_key();
     /// let vault = Vault::new(&key, "AES.GCM.V1");
@@ -168,7 +171,7 @@ impl Vault {
     /// # Example
     ///
     /// ```
-    /// use lockbox::{Vault, generate_key};
+    /// use lockboxer::{Vault, generate_key};
     ///
     /// let key = generate_key();
     /// let vault = Vault::new(&key, "AES.GCM.V1");

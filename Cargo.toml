@@ -12,7 +12,7 @@ edition = "2021"
 
 [dependencies]
 aes-gcm = "0.10.3"
-thiserror = "1.0.63"
+thiserror = "2.0.16"
 
 [dev-dependencies]
 hex = "0.4.3"

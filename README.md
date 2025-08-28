@@ -1,5 +1,10 @@
 # Lockboxer
 
+[![Build Status](https://github.com/kimlindholm/lockboxer/actions/workflows/ci.yml/badge.svg)](https://github.com/kimlindholm/lockboxer/actions/workflows/ci.yml)
+[![Crates.io](https://img.shields.io/crates/v/lockboxer.svg)](https://crates.io/crates/lockboxer)
+[![Docs](https://docs.rs/lockboxer/badge.svg)](https://docs.rs/lockboxer)
+[![Dependencies](https://deps.rs/repo/github/kimlindholm/lockboxer/status.svg)](https://deps.rs/repo/github/kimlindholm/lockboxer)
+
 `Lockboxer` is a configurable fork of [Lockbox](https://github.com/scrogson/lockbox) Rust library that provides easy-to-use, secure, and efficient
 encryption and decryption using the AES-GCM (Galois/Counter Mode) algorithm.
 

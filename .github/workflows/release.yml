@@ -1,0 +1,66 @@
+name: Release and Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Cache Cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build project
+        run: cargo build --release
+
+      - name: Run tests
+        run: cargo test --all
+
+      - name: Create changelog
+        run: |
+          echo "## Changes in ${GITHUB_REF_NAME}" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+
+          prev_tag=$(git tag --sort=-v:refname | sed -n '2p')
+
+          if [ -n "$prev_tag" ]; then
+            git log --pretty=format:"- %s" "${prev_tag:-HEAD}..HEAD" >> CHANGELOG.md
+          else
+            git log --pretty=format:"- %s" >> CHANGELOG.md
+          fi
+          echo "" >> CHANGELOG.md
+
+          echo "### Breaking Changes" >> CHANGELOG.md
+          echo "- None" >> CHANGELOG.md
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          body_path: CHANGELOG.md
+
+      - name: Publish to crates.io
+        uses: actions-rs/cargo@v1
+        with:
+          command: publish
+          args: --allow-dirty --token ${{ secrets.CRATES_TOKEN }}

@@ -24,7 +24,7 @@ To use `Lockboxer` in your Rust project, add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-lockboxer = "0.1"
+lockboxer = "0.2"
 ```
 
 ## Getting Started

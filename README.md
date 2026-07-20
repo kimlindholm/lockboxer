@@ -55,7 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Decrypt the ciphertext
     let decrypted = vault.decrypt(&encrypted)?;
-    println!("Decrypted: {}", String::from_utf8(decrypted)?);
+    println!("Decrypted: {}", decrypted);
 
     Ok(())
 }

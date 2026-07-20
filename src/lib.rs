@@ -20,8 +20,8 @@ mod tag;
 use crate::cipher::{Aes256GcmIv16, Cipher, IvLength};
 use crate::config::VaultConfig;
 use crate::tag::{TagDecoder, TagEncoder};
-use aes_gcm::aead::{KeyInit, OsRng, Payload};
-use aes_gcm::Aes256Gcm;
+use aes_gcm::aead::{Generate, Payload};
+use aes_gcm::{Aes256Gcm, Key};
 use thiserror::Error;
 
 pub type Vault = VaultWithConfig<DefaultIvLength>;
@@ -32,6 +32,9 @@ pub type IvLength16 = Aes256GcmIv16;
 
 #[derive(Debug, Error)]
 pub enum Error {
+    #[error("Invalid key length")]
+    InvalidKeyLength,
+
     #[error("AES-GCM encrypt error")]
     Encrypt,
 
@@ -61,7 +64,7 @@ pub enum Error {
 /// println!("Generated key: {:?}", key);
 /// ```
 pub fn generate_key() -> Vec<u8> {
-    Aes256Gcm::generate_key(OsRng).to_vec()
+    Key::<Aes256Gcm>::generate().to_vec()
 }
 
 /// Vault provides methods for encrypting and decrypting data using the AES-GCM algorithm.
@@ -82,7 +85,11 @@ impl<I: IvLength> VaultWithConfig<I> {
     ///
     /// # Returns
     ///
-    /// A new `Vault` instance.
+    /// A `Result` containing a new `Vault` instance or an `Error`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `Error::InvalidKeyLength` if the key has the wrong length.
     ///
     /// # Example
     ///
@@ -90,13 +97,14 @@ impl<I: IvLength> VaultWithConfig<I> {
     /// use lockboxer::Vault;
     ///
     /// let key = [0u8; 32]; // 256-bit key for AES-256
-    /// let vault = Vault::new(&key);
+    /// let vault = Vault::try_new(&key)?;
+    /// # Ok::<(), lockboxer::Error>(())
     /// ```
-    pub fn new(key: &[u8]) -> Self {
-        Self {
-            cipher: Cipher::new(key),
+    pub fn try_new(key: &[u8]) -> Result<Self, Error> {
+        Ok(Self {
+            cipher: Cipher::try_new(key).map_err(|_| Error::InvalidKeyLength)?,
             config: VaultConfig::default(),
-        }
+        })
     }
 
     /// Sets a custom tag for the vault.
@@ -115,7 +123,8 @@ impl<I: IvLength> VaultWithConfig<I> {
     /// use lockboxer::Vault;
     ///
     /// let key = [0u8; 32];
-    /// let vault = Vault::new(&key).with_tag("Custom.Tag.V1");
+    /// let vault = Vault::try_new(&key)?.with_tag("Custom.Tag.V1");
+    /// # Ok::<(), lockboxer::Error>(())
     /// ```
     pub fn with_tag(mut self, tag: &str) -> Self {
         self.config.tag = tag.to_string();
@@ -138,7 +147,8 @@ impl<I: IvLength> VaultWithConfig<I> {
     /// use lockboxer::Vault;
     ///
     /// let key = [0u8; 32];
-    /// let vault = Vault::new(&key).with_aad("Custom.AAD");
+    /// let vault = Vault::try_new(&key)?.with_aad("Custom.AAD");
+    /// # Ok::<(), lockboxer::Error>(())
     /// ```
     pub fn with_aad(mut self, aad: &str) -> Self {
         self.config.aad = aad.to_string();
@@ -167,9 +177,10 @@ impl<I: IvLength> VaultWithConfig<I> {
     /// use lockboxer::{Vault, generate_key};
     ///
     /// let key = generate_key();
-    /// let vault = Vault::new(&key);
+    /// let vault = Vault::try_new(&key)?;
     ///
-    /// let encrypted = vault.encrypt(b"Hello, world!").unwrap();
+    /// let encrypted = vault.encrypt(b"Hello, world!")?;
+    /// # Ok::<(), lockboxer::Error>(())
     /// ```
     pub fn encrypt(&self, plaintext: &[u8]) -> Result<Vec<u8>, Error> {
         let iv = self.cipher.init_iv();
@@ -183,7 +194,7 @@ impl<I: IvLength> VaultWithConfig<I> {
                     msg: plaintext,
                     aad,
                 },
-                iv.to_vec(),
+                &iv,
             )
             .map_err(|_| Error::Encrypt)?;
 
@@ -223,11 +234,12 @@ impl<I: IvLength> VaultWithConfig<I> {
     /// use lockboxer::{Vault, generate_key};
     ///
     /// let key = generate_key();
-    /// let vault = Vault::new(&key);
+    /// let vault = Vault::try_new(&key)?;
     ///
-    /// let encrypted = vault.encrypt(b"Hello, world!").unwrap();
-    /// let decrypted = vault.decrypt(&encrypted).unwrap();
+    /// let encrypted = vault.encrypt(b"Hello, world!")?;
+    /// let decrypted = vault.decrypt(&encrypted)?;
     /// assert_eq!(decrypted.as_bytes(), b"Hello, world!");
+    /// # Ok::<(), lockboxer::Error>(())
     /// ```
     pub fn decrypt(&self, ciphertext: &[u8]) -> Result<String, Error> {
         // Decode the tag using TagDecoder
@@ -258,7 +270,7 @@ mod tests {
     #[test]
     fn works_with_default_config() {
         let key = generate_key();
-        let vault = Vault::new(&key);
+        let vault = Vault::try_new(&key).expect("vault creation failed");
 
         let encrypted = vault.encrypt(PLAINTEXT).expect("encryption failed");
         let decrypted = vault.decrypt(&encrypted).expect("decryption failed");
@@ -269,7 +281,8 @@ mod tests {
     #[test]
     fn works_with_16_byte_iv_length() {
         let key = generate_key();
-        let vault: VaultWithConfig<IvLength16> = VaultWithConfig::new(&key);
+        let vault: VaultWithConfig<IvLength16> =
+            VaultWithConfig::try_new(&key).expect("vault creation failed");
 
         let encrypted = vault.encrypt(PLAINTEXT).expect("encryption failed");
         let decrypted = vault.decrypt(&encrypted).expect("decryption failed");
@@ -280,7 +293,9 @@ mod tests {
     #[test]
     fn works_with_custom_tag() {
         let key = generate_key();
-        let vault = Vault::new(&key).with_tag("Custom.Tag.V1");
+        let vault = Vault::try_new(&key)
+            .expect("vault creation failed")
+            .with_tag("Custom.Tag.V1");
 
         let encrypted = vault.encrypt(PLAINTEXT).expect("encryption failed");
         let decrypted = vault.decrypt(&encrypted).expect("decryption failed");
@@ -291,8 +306,9 @@ mod tests {
     #[test]
     fn works_with_custom_aad() {
         let key = generate_key();
-        let vault: VaultWithConfig<DefaultIvLength> =
-            VaultWithConfig::new(&key).with_aad("Custom AAD");
+        let vault: VaultWithConfig<DefaultIvLength> = VaultWithConfig::try_new(&key)
+            .expect("vault creation failed")
+            .with_aad("Custom AAD");
 
         let encrypted = vault.encrypt(PLAINTEXT).expect("encryption failed");
         let decrypted = vault.decrypt(&encrypted).expect("decryption failed");
@@ -303,8 +319,12 @@ mod tests {
     #[test]
     fn decryption_fails_with_wrong_tag() {
         let key = generate_key();
-        let vault_1 = Vault::new(&key).with_tag("Tag.V1");
-        let vault_2 = Vault::new(&key).with_tag("Tag.V2");
+        let vault_1 = Vault::try_new(&key)
+            .expect("vault creation failed")
+            .with_tag("Tag.V1");
+        let vault_2 = Vault::try_new(&key)
+            .expect("vault creation failed")
+            .with_tag("Tag.V2");
 
         let encrypted = vault_1.encrypt(PLAINTEXT).expect("encryption failed");
         assert!(vault_2.decrypt(&encrypted).is_err());
@@ -313,8 +333,12 @@ mod tests {
     #[test]
     fn decryption_fails_with_wrong_aad() {
         let key = generate_key();
-        let vault_1 = Vault::new(&key).with_aad("AAD.V1");
-        let vault_2 = Vault::new(&key).with_aad("AAD.V2");
+        let vault_1 = Vault::try_new(&key)
+            .expect("vault creation failed")
+            .with_aad("AAD.V1");
+        let vault_2 = Vault::try_new(&key)
+            .expect("vault creation failed")
+            .with_aad("AAD.V2");
 
         let encrypted = vault_1.encrypt(PLAINTEXT).expect("encryption failed");
         assert!(vault_2.decrypt(&encrypted).is_err());
@@ -323,7 +347,7 @@ mod tests {
     #[test]
     fn decryption_fails_with_invalid_ciphertext() {
         let key = generate_key();
-        let vault = Vault::new(&key);
+        let vault = Vault::try_new(&key).expect("vault creation failed");
 
         let invalid_ciphertext = b"Invalid data";
         assert!(vault.decrypt(invalid_ciphertext).is_err());

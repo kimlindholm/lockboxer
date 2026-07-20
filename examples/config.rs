@@ -2,7 +2,7 @@ use lockboxer::{IvLength16, VaultWithConfig};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let key = lockboxer::generate_key();
-    let vault: VaultWithConfig<IvLength16> = VaultWithConfig::new(&key)
+    let vault: VaultWithConfig<IvLength16> = VaultWithConfig::try_new(&key)?
         .with_tag("Custom.Tag.V1")
         .with_aad("Custom.AAD");
 

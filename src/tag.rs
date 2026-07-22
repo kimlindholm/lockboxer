@@ -118,10 +118,15 @@ impl TagDecoder {
 
     /// Calculates the number of bytes needed to represent the value based on the list.
     ///
-    /// Errors instead of overflowing on attacker-controlled length bytes.
+    /// Errors instead of overflowing on attacker-controlled length bytes,
+    /// or when the list holds fewer than `num_bytes` bytes.
     fn value_bytes(list: &[u8], num_bytes: usize) -> Result<usize, &'static str> {
-        list.iter()
-            .take(num_bytes)
+        if list.len() < num_bytes {
+            return Err("Invalid message length");
+        }
+
+        list[..num_bytes]
+            .iter()
             .try_fold(0usize, |acc, &value| {
                 acc.checked_mul(Self::BYTE_LENGTH)
                     .and_then(|acc| acc.checked_add(value as usize))

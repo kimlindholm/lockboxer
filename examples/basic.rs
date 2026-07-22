@@ -1,7 +1,7 @@
 use lockboxer::Vault;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let key = lockboxer::generate_key();
+    let key = lockboxer::generate_key()?;
     let vault = Vault::try_new(&key)?;
 
     let plaintext = b"plaintext";

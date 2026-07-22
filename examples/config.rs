@@ -1,8 +1,8 @@
-use lockboxer::{IvLength16, VaultWithConfig};
+use lockboxer::VaultIv16;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let key = lockboxer::generate_key();
-    let vault: VaultWithConfig<IvLength16> = VaultWithConfig::try_new(&key)?
+    let key = lockboxer::generate_key()?;
+    let vault = VaultIv16::try_new(&key)?
         .with_tag("Custom.Tag.V1")
         .with_aad("Custom.AAD");
 

@@ -24,7 +24,7 @@ To use `Lockboxer` in your Rust project, add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-lockboxer = "0.2"
+lockboxer = "0.3"
 ```
 
 ## Getting Started
@@ -38,13 +38,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate a random key
     // This is for demo purposes. In a real situation you'll want to
     // use a stable key.
-    let key = lockboxer::generate_key();
+    let key = lockboxer::generate_key()?;
 
     // Initialize a vault with the key
-    let vault = Vault::new(&key);
+    let vault = Vault::try_new(&key)?;
 
     // Or with config options:
-    let vault = Vault::new(&key)
+    let vault = Vault::try_new(&key)?
         .with_tag("Custom.Tag.V1")
         .with_aad("Custom.AAD");
 

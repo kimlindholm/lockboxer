@@ -9,10 +9,11 @@ homepage = "https://github.com/kimlindholm/lockboxer"
 documentation = "https://docs.rs/lockboxer"
 version = "0.2.0"
 edition = "2021"
+rust-version = "1.85"
 
 [dependencies]
-aes-gcm = "0.10.3"
-thiserror = "2.0.18"
+aes-gcm = "0.11.0"
+thiserror = "2.0.19"
 
 [dev-dependencies]
 hex = "0.4.3"

@@ -1,6 +1,6 @@
 use aes_gcm::aead::array::typenum::Unsigned;
 use aes_gcm::aead::consts::U16;
-use aes_gcm::aead::{Aead, Generate, KeyInit, Payload};
+use aes_gcm::aead::{Aead, AeadInOut, Generate, KeyInit, Payload, Tag};
 use aes_gcm::aes::Aes256;
 use aes_gcm::{Aes256Gcm, AesGcm, Error, Key, Nonce};
 use zeroize::Zeroize;
@@ -19,13 +19,13 @@ mod private {
 /// This trait is sealed: the wire format depends on the exact IV and
 /// tag sizes of the supported variants, so it cannot be implemented
 /// outside this crate.
-pub trait IvLength: KeyInit + Aead + private::Sealed {}
+pub trait IvLength: KeyInit + Aead + AeadInOut + private::Sealed {}
 
 impl IvLength for Aes256Gcm {}
 
 impl IvLength for Aes256GcmIv16 {}
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone)]
 pub(crate) struct Cipher<I: IvLength> {
     cipher: I,
 }
@@ -55,7 +55,7 @@ impl<I: IvLength> Cipher<I> {
         self.cipher.encrypt(nonce, payload)
     }
 
-    pub(crate) fn decrypt(&self, remainder: Vec<u8>, aad: &[u8]) -> Result<Vec<u8>, Error> {
+    pub(crate) fn decrypt(&self, mut remainder: Vec<u8>, aad: &[u8]) -> Result<Vec<u8>, Error> {
         let iv_length = I::NonceSize::USIZE;
         let tag_length = I::TagSize::USIZE;
 
@@ -64,22 +64,18 @@ impl<I: IvLength> Cipher<I> {
             return Err(Error);
         }
 
-        // Extract IV, Ciphertag, and Ciphertext
-        let iv = &remainder[..iv_length];
-        let ciphertag = &remainder[iv_length..iv_length + tag_length];
-        let ciphertext = &remainder[iv_length + tag_length..]; // Remaining is ciphertext
+        // Extract IV and Ciphertag; the rest is ciphertext
+        let nonce = Nonce::try_from(&remainder[..iv_length]).map_err(|_| Error)?;
+        let ciphertag =
+            Tag::<I>::try_from(&remainder[iv_length..iv_length + tag_length]).map_err(|_| Error)?;
 
-        // Combine ciphertext and ciphertag for decryption
-        let mut combined_ciphertext = Vec::with_capacity(remainder.len() - iv_length);
-        combined_ciphertext.extend_from_slice(ciphertext);
-        combined_ciphertext.extend_from_slice(ciphertag); // Append the tag for decryption
+        // Decrypt the ciphertext in place, then drop the IV and Ciphertag
+        // prefix to leave only the plaintext
+        let ciphertext = &mut remainder[iv_length + tag_length..];
+        self.cipher
+            .decrypt_inout_detached(&nonce, aad, ciphertext.into(), &ciphertag)?;
 
-        let payload = Payload {
-            msg: &combined_ciphertext,
-            aad,
-        };
-
-        let nonce = Nonce::try_from(iv).map_err(|_| Error)?;
-        self.cipher.decrypt(&nonce, payload)
+        remainder.drain(..iv_length + tag_length);
+        Ok(remainder)
     }
 }

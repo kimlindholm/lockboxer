@@ -22,8 +22,10 @@ use crate::tag::{TagDecoder, TagEncoder};
 use aes_gcm::aead::{Generate, Payload};
 use aes_gcm::{Aes256Gcm, Key};
 use thiserror::Error;
+use zeroize::Zeroize;
 
 pub use crate::config::VaultConfig;
+pub use zeroize::Zeroizing;
 
 pub type Vault = VaultWithConfig<DefaultIvLength>;
 pub type VaultIv16 = VaultWithConfig<IvLength16>;
@@ -61,7 +63,9 @@ pub enum Error {
 ///
 /// # Returns
 ///
-/// A `Result` containing the generated key as a `Vec<u8>` or an `Error`.
+/// A `Result` containing the generated key as a [`Zeroizing`]`<Vec<u8>>`,
+/// which derefs to `&[u8]` and wipes the key from memory on drop, or an
+/// `Error`.
 ///
 /// # Errors
 ///
@@ -71,12 +75,14 @@ pub enum Error {
 ///
 /// ```
 /// let key = lockboxer::generate_key()?;
-/// println!("Generated key: {:?}", key);
+/// let vault = lockboxer::Vault::try_new(&key)?;
 /// # Ok::<(), lockboxer::Error>(())
 /// ```
-pub fn generate_key() -> Result<Vec<u8>, Error> {
-    let key = Key::<Aes256Gcm>::try_generate().map_err(|_| Error::Rng)?;
-    Ok(key.to_vec())
+pub fn generate_key() -> Result<Zeroizing<Vec<u8>>, Error> {
+    let mut key = Key::<Aes256Gcm>::try_generate().map_err(|_| Error::Rng)?;
+    let bytes = Zeroizing::new(key.to_vec());
+    key.as_mut_slice().zeroize();
+    Ok(bytes)
 }
 
 /// Vault provides methods for encrypting and decrypting data using the AES-GCM algorithm.
@@ -299,7 +305,10 @@ impl<I: IvLength> VaultWithConfig<I> {
 
         // Return the decrypted data as a UTF-8 string; a unit error keeps
         // the rejected plaintext out of caller error values and logs
-        String::from_utf8(plaintext).map_err(|_| Error::Utf8)
+        String::from_utf8(plaintext).map_err(|err| {
+            err.into_bytes().zeroize();
+            Error::Utf8
+        })
     }
 }
 

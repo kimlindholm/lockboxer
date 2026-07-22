@@ -12,8 +12,9 @@ edition = "2021"
 rust-version = "1.85"
 
 [dependencies]
-aes-gcm = "0.11.0"
+aes-gcm = { version = "0.11.0", features = ["zeroize"] }
 thiserror = "2.0.19"
+zeroize = { version = "1.9.0", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
 hex = "0.4.3"

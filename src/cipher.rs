@@ -3,6 +3,7 @@ use aes_gcm::aead::consts::U16;
 use aes_gcm::aead::{Aead, Generate, KeyInit, Payload};
 use aes_gcm::aes::Aes256;
 use aes_gcm::{Aes256Gcm, AesGcm, Error, Key, Nonce};
+use zeroize::Zeroize;
 
 pub type Aes256GcmIv16 = AesGcm<Aes256, U16>;
 
@@ -31,11 +32,11 @@ pub(crate) struct Cipher<I: IvLength> {
 
 impl<I: IvLength> Cipher<I> {
     pub(crate) fn try_new(key: &[u8]) -> Result<Self, Error> {
-        let key = Key::<I>::try_from(key).map_err(|_| Error)?;
+        let mut key = Key::<I>::try_from(key).map_err(|_| Error)?;
+        let cipher = I::new(&key);
+        key.as_mut_slice().zeroize();
 
-        Ok(Cipher {
-            cipher: I::new(&key),
-        })
+        Ok(Cipher { cipher })
     }
 
     pub(crate) fn tag_length(&self) -> usize {

@@ -367,6 +367,42 @@ mod tests {
     }
 
     #[test]
+    fn works_with_empty_plaintext() {
+        let key = generate_key().expect("key generation failed");
+        let vault = Vault::try_new(&key).expect("vault creation failed");
+
+        let encrypted = vault.encrypt(b"").expect("encryption failed");
+        let decrypted = vault.decrypt(&encrypted).expect("decryption failed");
+
+        assert_eq!(decrypted, "");
+    }
+
+    #[test]
+    fn works_with_long_form_tlv_tag() {
+        let key = generate_key().expect("key generation failed");
+        let vault = Vault::try_new(&key)
+            .expect("vault creation failed")
+            .with_tag("X".repeat(200));
+
+        let encrypted = vault.encrypt(PLAINTEXT).expect("encryption failed");
+
+        // A 200-byte tag needs the long form: length field 0x81 (most
+        // significant bit set, one length byte) followed by 200
+        assert_eq!(&encrypted[..3], &[0x01, 0x81, 200]);
+
+        let decrypted = vault.decrypt(&encrypted).expect("decryption failed");
+        assert_eq!(decrypted.as_bytes(), PLAINTEXT);
+    }
+
+    #[test]
+    fn vault_creation_fails_with_invalid_key_length() {
+        assert!(matches!(
+            Vault::try_new(&[0u8; 16]),
+            Err(Error::InvalidKeyLength)
+        ));
+    }
+
+    #[test]
     fn decryption_fails_with_wrong_tag() {
         let key = generate_key().expect("key generation failed");
         let vault_1 = Vault::try_new(&key)
@@ -401,6 +437,15 @@ mod tests {
 
         let invalid_ciphertext = b"Invalid data";
         assert!(vault.decrypt(invalid_ciphertext).is_err());
+    }
+
+    #[test]
+    fn decryption_fails_with_non_utf8_plaintext() {
+        let key = generate_key().expect("key generation failed");
+        let vault = Vault::try_new(&key).expect("vault creation failed");
+
+        let encrypted = vault.encrypt(&[0xff, 0xfe]).expect("encryption failed");
+        assert!(matches!(vault.decrypt(&encrypted), Err(Error::Utf8)));
     }
 
     #[test]

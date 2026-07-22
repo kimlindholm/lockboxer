@@ -84,8 +84,12 @@ impl TagDecoder {
         let rest = &message[2..];
 
         if len >= Self::HALF_BYTE {
-            Ok(Self::OFFSET + len - Self::HALF_BYTE
-                + Self::value_bytes(rest, len - Self::HALF_BYTE))
+            let size = len - Self::HALF_BYTE;
+            let value = Self::value_bytes(rest, size)?;
+
+            (Self::OFFSET + size)
+                .checked_add(value)
+                .ok_or("Invalid message length")
         } else {
             Ok(Self::OFFSET + len)
         }
@@ -113,9 +117,15 @@ impl TagDecoder {
     }
 
     /// Calculates the number of bytes needed to represent the value based on the list.
-    fn value_bytes(list: &[u8], num_bytes: usize) -> usize {
+    ///
+    /// Errors instead of overflowing on attacker-controlled length bytes.
+    fn value_bytes(list: &[u8], num_bytes: usize) -> Result<usize, &'static str> {
         list.iter()
             .take(num_bytes)
-            .fold(0, |acc, &value| acc * Self::BYTE_LENGTH + value as usize)
+            .try_fold(0usize, |acc, &value| {
+                acc.checked_mul(Self::BYTE_LENGTH)
+                    .and_then(|acc| acc.checked_add(value as usize))
+            })
+            .ok_or("Invalid message length")
     }
 }

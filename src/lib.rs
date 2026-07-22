@@ -405,6 +405,19 @@ mod tests {
         assert!(vault.decrypt(&truncated_ciphertext).is_err());
     }
 
+    #[test]
+    fn decryption_fails_with_oversized_tlv_length() {
+        let key = generate_key().expect("key generation failed");
+        let vault = Vault::try_new(&key).expect("vault creation failed");
+
+        // Long-form TLV length of 9 bytes, all 0xff: the encoded tag
+        // length exceeds usize and must be rejected, not overflow
+        let mut oversized = vec![0x01, 0x89];
+        oversized.extend_from_slice(&[0xff; 9]);
+        oversized.extend_from_slice(&[0x00; 40]);
+        assert!(vault.decrypt(&oversized).is_err());
+    }
+
     // Fixtures generated with lockboxer v0.2.0 (aes-gcm 0.10.3) pin the wire
     // format, catching encoding changes that round-trip tests would miss.
 
